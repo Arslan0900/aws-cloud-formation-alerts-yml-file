@@ -1,0 +1,424 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudWatch Alarms for ECS, WAF, ALB, NAT Gateways, Redis, with GcMonitoringNotifications SNS topic"
+
+Resources:
+  # SNS Topic for notifications
+  GcMonitoringNotifications:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: "GcMonitoringNotifications"
+
+  # ECS Cluster Alarms for verified-game-cluster
+  ECSCPUUtilizationAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "ECS-CPU-Utilization-High-verified-game-cluster"
+      Namespace: "AWS/ECS"
+      MetricName: "CPUUtilization"
+      Dimensions:
+        - Name: "ClusterName"
+          Value: "verified-game-cluster"
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  ECSMemoryUtilizationAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "ECS-Memory-Utilization-High-verified-game-cluster"
+      Namespace: "AWS/ECS"
+      MetricName: "MemoryUtilization"
+      Dimensions:
+        - Name: "ClusterName"
+          Value: "verified-game-cluster"
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 80
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  ECSPendingTasksAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "ECS-Pending-Tasks-High-verified-game-cluster"
+      Namespace: "AWS/ECS"
+      MetricName: "PendingTasks"
+      Dimensions:
+        - Name: "ClusterName"
+          Value: "verified-game-cluster"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  # WAF Alarms for verified-game-web-acl
+  WAFBlockedRequestsAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "WAF-Blocked-Requests-High-verified-game-web-acl"
+      Namespace: "AWS/WAFV2"
+      MetricName: "BlockedRequests"
+      Dimensions:
+        - Name: "WebACL"
+          Value: "verified-game-web-acl"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 100
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  WAFAllowedRequestsAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "WAF-Allowed-Requests-High-verified-game-web-acl"
+      Namespace: "AWS/WAFV2"
+      MetricName: "AllowedRequests"
+      Dimensions:
+        - Name: "WebACL"
+          Value: "verified-game-web-acl"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  WAFRateLimitOverageAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "WAF-Rate-Limit-Overage"
+      Namespace: "AWS/WAFV2"
+      MetricName: "RateLimitedRequests"
+      Dimensions:
+        - Name: "WebACL"
+          Value: "verified-game-web-acl"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  # ALB Alarms for gamecheck-prod-srvc-alb
+  ALB4XXCountAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "ALB-HTTP-4XX-High-gamecheck-prod-srvc-alb"
+      Namespace: "AWS/ApplicationELB"
+      MetricName: "HTTPCode_Target_4XX_Count"
+      Dimensions:
+        - Name: "LoadBalancer"
+          Value: "app/gamecheck-prod-srvc-alb/95557bc3cf01ff80"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 100
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  ALB5XXCountAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "ALB-HTTP-5XX-High-gamecheck-prod-srvc-alb"
+      Namespace: "AWS/ApplicationELB"
+      MetricName: "HTTPCode_Target_5XX_Count"
+      Dimensions:
+        - Name: "LoadBalancer"
+          Value: "app/gamecheck-prod-srvc-alb/95557bc3cf01ff80"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 10
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  ALBTargetResponseTimeAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "ALB-Target-Response-Time-High-gamecheck-prod-srvc-alb"
+      Namespace: "AWS/ApplicationELB"
+      MetricName: "TargetResponseTime"
+      Dimensions:
+        - Name: "LoadBalancer"
+          Value: "app/gamecheck-prod-srvc-alb/95557bc3cf01ff80"
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 0.5
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  ALBNewConnectionCountAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "ALB-New-Connection-Count-High"
+      Namespace: "AWS/ApplicationELB"
+      MetricName: "NewConnectionCount"
+      Dimensions:
+        - Name: "LoadBalancer"
+          Value: "app/gamecheck-prod-srvc-alb/95557bc3cf01ff80"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 500
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  ALBActiveConnectionCountAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "ALB-Active-Connection-Count-High"
+      Namespace: "AWS/ApplicationELB"
+      MetricName: "ActiveConnectionCount"
+      Dimensions:
+        - Name: "LoadBalancer"
+          Value: "app/gamecheck-prod-srvc-alb/95557bc3cf01ff80"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  # NAT Gateway Alarms for NAT Gateway 1 in eu-central-1a
+  NAT1NetworkInAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "NAT-Network-In-High-verified-game-main-nat-public1-eu-central-1a"
+      Namespace: "AWS/NATGateway"
+      MetricName: "BytesIn"
+      Dimensions:
+        - Name: "NatGatewayId"
+          Value: "nat-07e61898e4aab5f95"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5000000000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  NAT1NetworkOutAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "NAT-Network-Out-High-verified-game-main-nat-public1-eu-central-1a"
+      Namespace: "AWS/NATGateway"
+      MetricName: "BytesOut"
+      Dimensions:
+        - Name: "NatGatewayId"
+          Value: "nat-07e61898e4aab5f95"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5000000000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  NAT1PacketsDropCountAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "NAT-Packets-Drop-Count-High-verified-game-main-nat-public1-eu-central-1a"
+      Namespace: "AWS/NATGateway"
+      MetricName: "PacketsDropCount"
+      Dimensions:
+        - Name: "NatGatewayId"
+          Value: "nat-07e61898e4aab5f95"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 100
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  # NAT Gateway Alarms for NAT Gateway 2 in eu-central-1b
+  NAT2NetworkInAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "NAT-Network-In-High-verified-game-main-nat-public2-eu-central-1b"
+      Namespace: "AWS/NATGateway"
+      MetricName: "BytesIn"
+      Dimensions:
+        - Name: "NatGatewayId"
+          Value: "nat-0e716c78bedb46570"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5000000000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  NAT2NetworkOutAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "NAT-Network-Out-High-verified-game-main-nat-public2-eu-central-1b"
+      Namespace: "AWS/NATGateway"
+      MetricName: "BytesOut"
+      Dimensions:
+        - Name: "NatGatewayId"
+          Value: "nat-0e716c78bedb46570"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5000000000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  NAT2PacketsDropCountAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "NAT-Packets-Drop-Count-High-verified-game-main-nat-public2-eu-central-1b"
+      Namespace: "AWS/NATGateway"
+      MetricName: "PacketsDropCount"
+      Dimensions:
+        - Name: "NatGatewayId"
+          Value: "nat-0e716c78bedb46570"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 100
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  # NAT Gateway Alarms for NAT Gateway 3 in eu-central-1c
+  NAT3NetworkInAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "NAT-Network-In-High-verified-game-main-nat-public3-eu-central-1c"
+      Namespace: "AWS/NATGateway"
+      MetricName: "BytesIn"
+      Dimensions:
+        - Name: "NatGatewayId"
+          Value: "nat-05a4deb5ac5161b0a"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5000000000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  NAT3NetworkOutAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "NAT-Network-Out-High-verified-game-main-nat-public3-eu-central-1c"
+      Namespace: "AWS/NATGateway"
+      MetricName: "BytesOut"
+      Dimensions:
+        - Name: "NatGatewayId"
+          Value: "nat-05a4deb5ac5161b0a"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 5000000000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  NAT3PacketsDropCountAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "NAT-Packets-Drop-Count-High-verified-game-main-nat-public3-eu-central-1c"
+      Namespace: "AWS/NATGateway"
+      MetricName: "PacketsDropCount"
+      Dimensions:
+        - Name: "NatGatewayId"
+          Value: "nat-05a4deb5ac5161b0a"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 100
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  # Redis Alarms for gamecheck-prod-redis
+  RedisEvictionsAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "Redis-Evictions-High-gamecheck-prod-redis"
+      Namespace: "AWS/ElastiCache"
+      MetricName: "Evictions"
+      Dimensions:
+        - Name: "CacheClusterId"
+          Value: "gamecheck-prod-redis"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 100
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  RedisCurrConnectionsAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "Redis-Current-Connections-High-gamecheck-prod-redis"
+      Namespace: "AWS/ElastiCache"
+      MetricName: "CurrConnections"
+      Dimensions:
+        - Name: "CacheClusterId"
+          Value: "gamecheck-prod-redis"
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1000
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  RedisCacheMissesAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "Redis-Cache-Misses-High-gamecheck-prod-redis"
+      Namespace: "AWS/ElastiCache"
+      MetricName: "CacheMisses"
+      Dimensions:
+        - Name: "CacheClusterId"
+          Value: "gamecheck-prod-redis"
+      Statistic: "Sum"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 200
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
+
+  RedisSwapUsageAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "Redis-Swap-Usage-High-gamecheck-prod-redis"
+      Namespace: "AWS/ElastiCache"
+      MetricName: "SwapUsage"
+      Dimensions:
+        - Name: "CacheClusterId"
+          Value: "gamecheck-prod-redis"
+      Statistic: "Average"
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1024
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - !Ref GcMonitoringNotifications
